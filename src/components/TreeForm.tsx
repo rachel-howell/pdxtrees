@@ -38,11 +38,12 @@ function PhotoThumb({ blob, onRemove }: { blob: Blob; onRemove: () => void }) {
 interface Props {
   tree?: Tree; // edit mode when set
   coords: { lat: number; lng: number };
+  accountPrivate: boolean;
   onSaved: (treeId: string) => void;
   onCancel: () => void;
 }
 
-export default function TreeForm({ tree, coords, onSaved, onCancel }: Props) {
+export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCancel }: Props) {
   const [commonName, setCommonName] = useState(tree?.commonName ?? '');
   const [nickname, setNickname] = useState(tree?.nickname ?? '');
   const [species, setSpecies] = useState(tree?.species ?? '');
@@ -51,6 +52,7 @@ export default function TreeForm({ tree, coords, onSaved, onCancel }: Props) {
     tree?.dateEncountered ?? new Date().toLocaleDateString('en-CA'),
   );
   const [confidence, setConfidence] = useState<Confidence>(tree?.confidence ?? 'medium');
+  const [isPublic, setIsPublic] = useState(tree?.isPublic ?? false);
   const [notes, setNotes] = useState(tree?.notes ?? '');
   const [lat, setLat] = useState(String(tree?.lat ?? coords.lat));
   const [lng, setLng] = useState(String(tree?.lng ?? coords.lng));
@@ -90,6 +92,7 @@ export default function TreeForm({ tree, coords, onSaved, onCancel }: Props) {
         dateEncountered,
         notes: notes.trim(),
         confidence,
+        isPublic,
         lat: latNum,
         lng: lngNum,
       };
@@ -180,6 +183,32 @@ export default function TreeForm({ tree, coords, onSaved, onCancel }: Props) {
             <input inputMode="decimal" value={lng} onChange={(e) => setLng(e.target.value)} />
           </label>
         </div>
+
+        <fieldset className="confidence-picker">
+          <legend>Visibility</legend>
+          <div className="segmented">
+            <button
+              type="button"
+              className={`seg seg-private ${!isPublic ? 'active' : ''}`}
+              onClick={() => setIsPublic(false)}
+            >
+              Private
+            </button>
+            <button
+              type="button"
+              className={`seg seg-public ${isPublic ? 'active' : ''}`}
+              onClick={() => setIsPublic(true)}
+            >
+              Public
+            </button>
+          </div>
+          {isPublic && accountPrivate && (
+            <p className="field-hint">
+              Your account-level privacy setting is on, so this tree stays hidden until you turn
+              that off in the menu.
+            </p>
+          )}
+        </fieldset>
 
         <label>
           Notes

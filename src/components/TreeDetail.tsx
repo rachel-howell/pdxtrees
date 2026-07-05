@@ -15,19 +15,35 @@ function PhotoView({ photo }: { photo: Photo }) {
 
 interface Props {
   tree: Tree;
+  accountPrivate: boolean;
+  readOnly: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onClose: () => void;
 }
 
-export default function TreeDetail({ tree, onEdit, onDelete, onClose }: Props) {
+export default function TreeDetail({
+  tree,
+  accountPrivate,
+  readOnly,
+  onEdit,
+  onDelete,
+  onClose,
+}: Props) {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     setConfirmingDelete(false);
-    getPhotos(tree.id).then(setPhotos);
+    setPhotos([]);
+    getPhotos(tree.id).then(setPhotos).catch(() => {});
   }, [tree]);
+
+  const visibility = !tree.isPublic
+    ? { label: 'Private', cls: 'badge-private' }
+    : accountPrivate && !readOnly
+      ? { label: 'Public · hidden by account privacy', cls: 'badge-muted-public' }
+      : { label: 'Public', cls: 'badge-public' };
 
   return (
     <aside className="detail-panel">
@@ -46,6 +62,7 @@ export default function TreeDetail({ tree, onEdit, onDelete, onClose }: Props) {
         <span className={`badge badge-${tree.confidence}`}>
           {CONFIDENCE_LABEL[tree.confidence]} confidence
         </span>
+        {!readOnly && <span className={`badge ${visibility.cls}`}>{visibility.label}</span>}
         <span className="detail-date">Encountered {tree.dateEncountered}</span>
       </div>
 
@@ -59,25 +76,27 @@ export default function TreeDetail({ tree, onEdit, onDelete, onClose }: Props) {
         <PhotoView key={p.id} photo={p} />
       ))}
 
-      <div className="detail-actions">
-        <button className="btn" onClick={onEdit}>
-          Edit
-        </button>
-        {confirmingDelete ? (
-          <>
-            <button className="btn btn-danger" onClick={onDelete}>
-              Really delete?
-            </button>
-            <button className="btn" onClick={() => setConfirmingDelete(false)}>
-              Keep
-            </button>
-          </>
-        ) : (
-          <button className="btn btn-danger-outline" onClick={() => setConfirmingDelete(true)}>
-            Delete
+      {!readOnly && (
+        <div className="detail-actions">
+          <button className="btn" onClick={onEdit}>
+            Edit
           </button>
-        )}
-      </div>
+          {confirmingDelete ? (
+            <>
+              <button className="btn btn-danger" onClick={onDelete}>
+                Really delete?
+              </button>
+              <button className="btn" onClick={() => setConfirmingDelete(false)}>
+                Keep
+              </button>
+            </>
+          ) : (
+            <button className="btn btn-danger-outline" onClick={() => setConfirmingDelete(true)}>
+              Delete
+            </button>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

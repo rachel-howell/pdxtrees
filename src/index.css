@@ -94,6 +94,7 @@ textarea,
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
+  color: var(--text); /* topbar is white-on-dark; the menu is not */
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -116,6 +117,39 @@ textarea,
 
 .menu button:hover {
   background: #f0f5f2;
+}
+
+.menu-toggle {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.menu-toggle input {
+  margin-top: 3px;
+}
+
+.menu-toggle small {
+  display: block;
+  color: var(--text-dim);
+  font-size: 12.5px;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: #fef3c7;
+  color: #78350f;
+  font-size: 14.5px;
+  z-index: 1050;
 }
 
 /* ---------- Buttons ---------- */
@@ -333,6 +367,18 @@ textarea,
   background: var(--low);
 }
 
+.badge-private {
+  background: #64748b;
+}
+
+.badge-public {
+  background: #0284c7;
+}
+
+.badge-muted-public {
+  background: #a16207;
+}
+
 .detail-date,
 .detail-coords {
   font-size: 13.5px;
@@ -508,6 +554,30 @@ textarea,
   background: var(--low);
   color: #fff;
   font-weight: 600;
+}
+
+.seg-private.active {
+  background: #64748b;
+  color: #fff;
+  font-weight: 600;
+}
+
+.seg-public.active {
+  background: #0284c7;
+  color: #fff;
+  font-weight: 600;
+}
+
+.field-hint {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: #a16207;
+}
+
+.login-modal p {
+  color: var(--text);
+  font-size: 15px;
 }
 
 .photo-label {

@@ -51,6 +51,8 @@ function MapEvents({ onTap }: { onTap: (latlng: LatLng) => void }) {
 interface Props {
   trees: Tree[];
   setMapRef: (map: LeafletMap | null) => void;
+  /** Logged-out visitors can browse but not drop pins. */
+  readOnly: boolean;
   /** When a panel is open, a map tap dismisses it instead of dropping a draft pin. */
   panelOpen: boolean;
   onDismissPanel: () => void;
@@ -61,6 +63,7 @@ interface Props {
 export default function MapView({
   trees,
   setMapRef,
+  readOnly,
   panelOpen,
   onDismissPanel,
   onSelect,
@@ -73,7 +76,7 @@ export default function MapView({
     if (panelOpen) {
       onDismissPanel();
       setDraft(null);
-    } else {
+    } else if (!readOnly) {
       setDraft({ lat: latlng.lat, lng: latlng.lng });
     }
   }
