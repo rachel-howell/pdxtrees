@@ -17,6 +17,7 @@ interface Props {
   tree: Tree;
   accountPrivate: boolean;
   readOnly: boolean;
+  onShowQr: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onClose: () => void;
@@ -26,6 +27,7 @@ export default function TreeDetail({
   tree,
   accountPrivate,
   readOnly,
+  onShowQr,
   onEdit,
   onDelete,
   onClose,
@@ -82,6 +84,9 @@ export default function TreeDetail({
         <div className="detail-actions">
           <button className="btn" onClick={onEdit}>
             Edit
+          </button>
+          <button className="btn" onClick={onShowQr}>
+            QR
           </button>
           {confirmingDelete ? (
             <>

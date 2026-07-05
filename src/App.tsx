@@ -3,14 +3,17 @@ import type { Map as LeafletMap } from 'leaflet';
 import {
   deleteTree,
   getAccountPrivate,
+  getTree,
   importRecords,
   listTrees,
   setAccountPrivate,
   type Tree,
 } from './db';
+import { treeIdFromHash } from './config';
 import { onSession, sendMagicLink, signOut, type Session } from './auth';
 import { clearLegacyData, readLegacyData } from './legacy';
 import { exportData, importData } from './export';
+import LabelSheet from './components/LabelSheet';
 import MapView, { type SearchTarget } from './components/MapView';
 import SearchPanel from './components/SearchPanel';
 import TreeDetail from './components/TreeDetail';
@@ -23,7 +26,8 @@ type Panel =
   | { kind: 'form'; tree?: Tree; coords: { lat: number; lng: number } };
 
 export default function App() {
-  const [session, setSession] = useState<Session | null>(null);
+  // undefined = session not yet known; null = definitely logged out
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [trees, setTrees] = useState<Tree[]>([]);
   const [accountPrivate, setAccountPrivateState] = useState(true);
   const [view, setView] = useState<'map' | 'list'>('map');
@@ -37,11 +41,12 @@ export default function App() {
   const [migrating, setMigrating] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTarget, setSearchTarget] = useState<SearchTarget | null>(null);
+  const [labelTrees, setLabelTrees] = useState<Tree[] | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<number | undefined>(undefined);
 
-  const loggedIn = session !== null;
+  const loggedIn = !!session;
 
   const refresh = useCallback(async () => {
     try {
@@ -54,6 +59,7 @@ export default function App() {
   useEffect(() => onSession(setSession), []);
 
   useEffect(() => {
+    if (session === undefined) return;
     refresh();
     if (session) {
       getAccountPrivate().then(setAccountPrivateState).catch(() => {});
@@ -61,6 +67,45 @@ export default function App() {
       setPanel({ kind: 'none' });
     }
   }, [session, refresh]);
+
+  // Deep links (#/tree/<id>, e.g. from a scanned QR code). RLS decides
+  // visibility: a private tree resolves for its owner and looks identical
+  // to a nonexistent one for everybody else.
+  useEffect(() => {
+    if (session === undefined) return; // wait until we know who's asking
+    async function resolveHash() {
+      const id = treeIdFromHash(window.location.hash);
+      if (!id) return;
+      const tree = await getTree(id).catch(() => null);
+      if (tree) {
+        setTrees((prev) => (prev.some((t) => t.id === tree.id) ? prev : [...prev, tree]));
+        setView('map');
+        setPanel({ kind: 'detail', treeId: tree.id });
+        mapRef.current?.flyTo([tree.lat, tree.lng], Math.max(mapRef.current.getZoom(), 18));
+      } else {
+        showToast('Tree not found — it may be private. Log in and try again.');
+        if (!session) {
+          setLoginState('idle');
+          setLoginOpen(true);
+        }
+      }
+    }
+    resolveHash();
+    window.addEventListener('hashchange', resolveHash);
+    return () => window.removeEventListener('hashchange', resolveHash);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  // Keep the URL hash in sync with the open detail so every tree view is shareable
+  useEffect(() => {
+    const openId = panel.kind === 'detail' ? panel.treeId : null;
+    const hashId = treeIdFromHash(window.location.hash);
+    if (openId && openId !== hashId) {
+      history.replaceState(null, '', `#/tree/${openId}`);
+    } else if (!openId && hashId) {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, [panel]);
 
   // Offer migration whenever pre-cloud local data remains on this device
   // (merge-by-id makes importing safe even when the cloud already has data)
@@ -201,6 +246,14 @@ export default function App() {
                     <button
                       onClick={() => {
                         setMenuOpen(false);
+                        setLabelTrees(trees);
+                      }}
+                    >
+                      Print QR labels
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
                         exportData().then(
                           () => showToast('Backup downloaded.'),
                           () => showToast('Export failed.'),
@@ -292,6 +345,7 @@ export default function App() {
             tree={selectedTree}
             accountPrivate={accountPrivate}
             readOnly={!loggedIn}
+            onShowQr={() => setLabelTrees([selectedTree])}
             onClose={() => setPanel({ kind: 'none' })}
             onEdit={() =>
               setPanel({
@@ -314,6 +368,7 @@ export default function App() {
             }
           />
         )}
+        {labelTrees && <LabelSheet trees={labelTrees} onClose={() => setLabelTrees(null)} />}
         {loginOpen && (
           <div className="modal-backdrop">
             <form className="modal login-modal" onSubmit={handleLogin}>

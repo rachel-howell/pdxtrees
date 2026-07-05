@@ -107,6 +107,13 @@ export async function listTrees(): Promise<Tree[]> {
   return (data as TreeRow[]).map(fromRow);
 }
 
+/** Single tree by id; null when it doesn't exist or RLS hides it (private + not owner). */
+export async function getTree(id: string): Promise<Tree | null> {
+  const { data, error } = await supabase.from('trees').select('*').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? fromRow(data as TreeRow) : null;
+}
+
 export async function createTree(
   data: Omit<Tree, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<Tree> {

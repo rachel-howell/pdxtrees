@@ -621,6 +621,32 @@ textarea,
   font-size: 15px;
 }
 
+.login-modal h2 {
+  margin: 0 0 12px;
+  font-size: 19px;
+}
+
+.login-modal label {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+
+.login-modal input {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 16px;
+  padding: 9px 11px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text);
+  background: #fff;
+}
+
 .photo-label {
   font-size: 13.5px;
   font-weight: 600;
@@ -786,6 +812,99 @@ textarea,
   font-size: 13px;
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- QR label sheet ---------- */
+
+.label-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: #fff;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.label-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 8in;
+  margin: 0 auto 14px;
+}
+
+.label-toolbar h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.label-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.label-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 2.5in);
+  justify-content: center;
+}
+
+.label-card {
+  width: 2.5in;
+  height: 3in;
+  border: 1px dashed #94a3b8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 3px;
+  padding: 0.12in;
+  break-inside: avoid;
+  overflow: hidden;
+}
+
+.label-qr {
+  width: 1.6in;
+  height: 1.6in;
+  margin-bottom: 0.06in;
+}
+
+.label-name {
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.label-species {
+  font-style: italic;
+  font-size: 11.5px;
+  color: #444;
+}
+
+.label-sub {
+  font-size: 11px;
+  color: #555;
+}
+
+@media print {
+  body.printing-labels .topbar,
+  body.printing-labels .main,
+  body.printing-labels .banner,
+  body.printing-labels .toast {
+    display: none !important;
+  }
+
+  .label-sheet {
+    position: static;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .label-toolbar {
+    display: none;
+  }
 }
 
 /* ---------- Toast ---------- */
