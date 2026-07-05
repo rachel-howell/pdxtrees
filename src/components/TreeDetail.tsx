@@ -33,7 +33,8 @@ export default function TreeDetail({ tree, onEdit, onDelete, onClose }: Props) {
     <aside className="detail-panel">
       <div className="detail-header">
         <div>
-          <h2>{tree.commonName}</h2>
+          <h2>{tree.nickname || tree.commonName}</h2>
+          {tree.nickname && <p className="detail-common">{tree.commonName}</p>}
           {tree.species && <p className="detail-species">{tree.species}</p>}
         </div>
         <button className="icon-btn" aria-label="Close" onClick={onClose}>

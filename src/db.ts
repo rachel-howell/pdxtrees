@@ -7,6 +7,8 @@ export interface Tree {
   lat: number;
   lng: number;
   commonName: string;
+  /** Personal name for the tree, distinct from species/common name. Absent on pre-v2 records. */
+  nickname?: string;
   species: string;
   dateEncountered: string; // ISO date (yyyy-mm-dd)
   notes: string;

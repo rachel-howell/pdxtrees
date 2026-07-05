@@ -25,7 +25,7 @@ export default function TreeList({ trees, onPick }: Props) {
         if (confidence !== 'all' && t.confidence !== confidence) return false;
         if (species !== 'all' && t.species !== species) return false;
         if (!q) return true;
-        return [t.commonName, t.species, t.notes].some((s) =>
+        return [t.commonName, t.nickname ?? '', t.species, t.notes].some((s) =>
           s.toLowerCase().includes(q),
         );
       })
@@ -86,8 +86,14 @@ export default function TreeList({ trees, onPick }: Props) {
               <button className="tree-row" onClick={() => onPick(t.id)}>
                 <span className={`dot dot-${t.confidence}`} title={CONFIDENCE_LABEL[t.confidence]} />
                 <span className="tree-row-main">
-                  <span className="tree-row-name">{t.commonName}</span>
-                  {t.species && <span className="tree-row-species">{t.species}</span>}
+                  <span className="tree-row-name">{t.nickname || t.commonName}</span>
+                  {(t.nickname || t.species) && (
+                    <span className="tree-row-species">
+                      {[t.nickname ? t.commonName : '', t.species]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </span>
+                  )}
                 </span>
                 <span className="tree-row-date">{t.dateEncountered}</span>
               </button>

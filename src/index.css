@@ -29,6 +29,22 @@ body {
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  /* Stop iOS long-press from selecting UI text / opening the callout menu */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Re-enable selection where the user actually works with text */
+input,
+textarea,
+.detail-notes,
+.detail-species,
+.detail-common,
+.detail-coords {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .app {
@@ -173,28 +189,33 @@ body {
   background: #14201a;
 }
 
+/* White-filled ring pins: readable against green canopy and pale rooftops alike */
 .pin {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  border: 3px solid #fff;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+  background: #fff;
+  border: 6px solid;
+  box-shadow:
+    0 0 0 1.5px rgba(0, 0, 0, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
 .pin-high {
-  background: var(--high);
+  border-color: var(--high);
 }
 
 .pin-medium {
-  background: var(--medium);
+  border-color: var(--medium);
 }
 
 .pin-low {
-  background: var(--low);
+  border-color: var(--low);
 }
 
 .pin-draft {
   background: var(--draft);
+  border: 4px solid #fff;
   animation: pulse 1.4s ease-in-out infinite;
 }
 
@@ -206,6 +227,23 @@ body {
   50% {
     transform: scale(1.25);
   }
+}
+
+.basemap-toggle {
+  position: absolute;
+  left: 12px;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 1000;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
 }
 
 .draft-bar {
@@ -271,6 +309,11 @@ body {
 .detail-header h2 {
   margin: 0;
   font-size: 20px;
+}
+
+.detail-common {
+  margin: 2px 0 0;
+  color: var(--text-dim);
 }
 
 .detail-species {
@@ -405,6 +448,16 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+.form-row > * {
+  min-width: 0; /* let date inputs shrink instead of overflowing their grid cell */
+}
+
+@media (max-width: 480px) {
+  .form-row {
+    grid-template-columns: 1fr; /* stack date/confidence and lat/lng on phones */
+  }
 }
 
 .confidence-picker {

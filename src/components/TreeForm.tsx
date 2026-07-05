@@ -44,6 +44,7 @@ interface Props {
 
 export default function TreeForm({ tree, coords, onSaved, onCancel }: Props) {
   const [commonName, setCommonName] = useState(tree?.commonName ?? '');
+  const [nickname, setNickname] = useState(tree?.nickname ?? '');
   const [species, setSpecies] = useState(tree?.species ?? '');
   const [dateEncountered, setDateEncountered] = useState(
     // en-CA formats as yyyy-mm-dd; unlike toISOString this stays in local time
@@ -84,6 +85,7 @@ export default function TreeForm({ tree, coords, onSaved, onCancel }: Props) {
     try {
       const data = {
         commonName: commonName.trim(),
+        nickname: nickname.trim(),
         species: species.trim(),
         dateEncountered,
         notes: notes.trim(),
@@ -121,6 +123,15 @@ export default function TreeForm({ tree, coords, onSaved, onCancel }: Props) {
             onChange={(e) => setCommonName(e.target.value)}
             placeholder="e.g. Douglas fir"
             autoFocus
+          />
+        </label>
+
+        <label>
+          Nickname (optional)
+          <input
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            placeholder="e.g. The Lopsided One"
           />
         </label>
 
@@ -203,10 +214,10 @@ export default function TreeForm({ tree, coords, onSaved, onCancel }: Props) {
             ))}
             <label className="photo-add">
               +
+              {/* no `capture` attr: iOS then offers Photo Library / Take Photo */}
               <input
                 type="file"
                 accept="image/*"
-                capture="environment"
                 multiple
                 hidden
                 onChange={(e) => {

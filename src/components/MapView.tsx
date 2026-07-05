@@ -4,7 +4,23 @@ import L, { type LatLng, type Map as LeafletMap } from 'leaflet';
 import type { Confidence, Tree } from '../db';
 
 const VIEW_KEY = 'pdxtrees:mapview';
+const BASEMAP_KEY = 'pdxtrees:basemap';
 const DEFAULT_VIEW = { lat: 45.5152, lng: -122.6784, zoom: 16 }; // Portland
+
+type Basemap = 'satellite' | 'streets';
+
+const BASEMAPS: Record<Basemap, { url: string; attribution: string; maxNativeZoom: number }> = {
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics',
+    maxNativeZoom: 19,
+  },
+  streets: {
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxNativeZoom: 19,
+  },
+};
 
 function loadView(): typeof DEFAULT_VIEW {
   try {
@@ -24,8 +40,8 @@ function pinIcon(kind: Confidence | 'draft'): L.DivIcon {
     icon = L.divIcon({
       className: '',
       html: `<div class="pin pin-${kind}"></div>`,
-      iconSize: [22, 22],
-      iconAnchor: [11, 11],
+      iconSize: [26, 26],
+      iconAnchor: [13, 13],
     });
     iconCache.set(kind, icon);
   }
@@ -68,6 +84,15 @@ export default function MapView({
 }: Props) {
   const [initialView] = useState(loadView);
   const [draft, setDraft] = useState<{ lat: number; lng: number } | null>(null);
+  const [basemap, setBasemap] = useState<Basemap>(() =>
+    localStorage.getItem(BASEMAP_KEY) === 'streets' ? 'streets' : 'satellite',
+  );
+
+  function toggleBasemap() {
+    const next: Basemap = basemap === 'satellite' ? 'streets' : 'satellite';
+    setBasemap(next);
+    localStorage.setItem(BASEMAP_KEY, next);
+  }
 
   function handleTap(latlng: LatLng) {
     if (panelOpen) {
@@ -77,6 +102,8 @@ export default function MapView({
       setDraft({ lat: latlng.lat, lng: latlng.lng });
     }
   }
+
+  const layer = BASEMAPS[basemap];
 
   return (
     <div className="map-wrap">
@@ -89,9 +116,10 @@ export default function MapView({
         className="map"
       >
         <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution="Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics"
-          maxNativeZoom={19}
+          key={basemap}
+          url={layer.url}
+          attribution={layer.attribution}
+          maxNativeZoom={layer.maxNativeZoom}
           maxZoom={21}
         />
         <MapEvents onTap={handleTap} />
@@ -105,6 +133,9 @@ export default function MapView({
         ))}
         {draft && <Marker position={[draft.lat, draft.lng]} icon={pinIcon('draft')} />}
       </MapContainer>
+      <button className="basemap-toggle" onClick={toggleBasemap}>
+        {basemap === 'satellite' ? 'Map' : 'Satellite'}
+      </button>
       {draft && (
         <div className="draft-bar">
           <span className="draft-coords">
