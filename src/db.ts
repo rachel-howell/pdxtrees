@@ -14,6 +14,8 @@ export interface Tree {
   dateEncountered: string; // ISO date (yyyy-mm-dd)
   notes: string;
   confidence: Confidence;
+  /** Human-readable spot, e.g. "SW Park Ave & SW Salmon St". Auto-filled, user-editable. */
+  locationLabel: string;
   /** Per-tree opt-in; only effective when the account privacy switch is off. */
   isPublic: boolean;
   createdAt: string;
@@ -37,6 +39,7 @@ interface TreeRow {
   date_encountered: string;
   notes: string;
   confidence: Confidence;
+  location_label: string;
   lat: number;
   lng: number;
   is_public: boolean;
@@ -61,6 +64,7 @@ function fromRow(r: TreeRow): Tree {
     dateEncountered: r.date_encountered,
     notes: r.notes,
     confidence: r.confidence,
+    locationLabel: r.location_label,
     isPublic: r.is_public,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -77,6 +81,7 @@ function toRow(data: Partial<Omit<Tree, 'id' | 'createdAt' | 'updatedAt'>>): Rec
   if (data.dateEncountered !== undefined) row.date_encountered = data.dateEncountered;
   if (data.notes !== undefined) row.notes = data.notes;
   if (data.confidence !== undefined) row.confidence = data.confidence;
+  if (data.locationLabel !== undefined) row.location_label = data.locationLabel;
   if (data.isPublic !== undefined) row.is_public = data.isPublic;
   return row;
 }
@@ -247,7 +252,12 @@ export async function importRecords(
     const { error } = await supabase.from('trees').insert(
       newTrees.map((t) => ({
         id: t.id,
-        ...toRow({ ...t, isPublic: t.isPublic ?? false, nickname: t.nickname ?? '' }),
+        ...toRow({
+          ...t,
+          isPublic: t.isPublic ?? false,
+          nickname: t.nickname ?? '',
+          locationLabel: t.locationLabel ?? '',
+        }),
         created_at: t.createdAt,
         updated_at: t.updatedAt,
       })),

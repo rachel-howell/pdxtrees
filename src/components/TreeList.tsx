@@ -87,9 +87,9 @@ export default function TreeList({ trees, onPick }: Props) {
                 <span className={`dot dot-${t.confidence}`} title={CONFIDENCE_LABEL[t.confidence]} />
                 <span className="tree-row-main">
                   <span className="tree-row-name">{t.nickname || t.commonName}</span>
-                  {(t.nickname || t.species) && (
+                  {(t.nickname || t.species || t.locationLabel) && (
                     <span className="tree-row-species">
-                      {[t.nickname ? t.commonName : '', t.species]
+                      {[t.locationLabel, t.nickname ? t.commonName : '', t.species]
                         .filter(Boolean)
                         .join(' · ')}
                     </span>

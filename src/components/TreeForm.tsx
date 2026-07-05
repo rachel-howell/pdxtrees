@@ -10,6 +10,7 @@ import {
   type Tree,
 } from '../db';
 import { compressImage } from '../image';
+import { locationLabel } from '../geo';
 
 const CONFIDENCES: { value: Confidence; label: string }[] = [
   { value: 'high', label: 'High' },
@@ -53,6 +54,8 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
   );
   const [confidence, setConfidence] = useState<Confidence>(tree?.confidence ?? 'medium');
   const [isPublic, setIsPublic] = useState(tree?.isPublic ?? false);
+  const [locLabel, setLocLabel] = useState(tree?.locationLabel ?? '');
+  const [labelLoading, setLabelLoading] = useState(false);
   const [notes, setNotes] = useState(tree?.notes ?? '');
   const [lat, setLat] = useState(String(tree?.lat ?? coords.lat));
   const [lng, setLng] = useState(String(tree?.lng ?? coords.lng));
@@ -65,6 +68,23 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
   useEffect(() => {
     if (tree) getPhotos(tree.id).then(setExistingPhotos);
   }, [tree]);
+
+  const refreshLabel = async (latNum: number, lngNum: number, keepExisting = false) => {
+    if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) return;
+    setLabelLoading(true);
+    try {
+      const label = await locationLabel(latNum, lngNum);
+      if (label) setLocLabel((prev) => (keepExisting && prev ? prev : label));
+    } finally {
+      setLabelLoading(false);
+    }
+  };
+
+  // Auto-fill the location for brand-new trees (best-effort, never blocks)
+  useEffect(() => {
+    if (!tree) refreshLabel(coords.lat, coords.lng, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -93,6 +113,7 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
         notes: notes.trim(),
         confidence,
         isPublic,
+        locationLabel: locLabel.trim(),
         lat: latNum,
         lng: lngNum,
       };
@@ -183,6 +204,27 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
             <input inputMode="decimal" value={lng} onChange={(e) => setLng(e.target.value)} />
           </label>
         </div>
+
+        <label>
+          Location
+          <span className="loc-row">
+            <input
+              value={locLabel}
+              onChange={(e) => setLocLabel(e.target.value)}
+              placeholder={labelLoading ? 'Looking up cross streets…' : 'e.g. SW Park Ave & SW Salmon St'}
+            />
+            <button
+              type="button"
+              className="btn loc-refresh"
+              title="Look up from coordinates"
+              aria-label="Look up location from coordinates"
+              disabled={labelLoading}
+              onClick={() => refreshLabel(Number(lat), Number(lng))}
+            >
+              {labelLoading ? '…' : '↻'}
+            </button>
+          </span>
+        </label>
 
         <fieldset className="confidence-picker">
           <legend>Visibility</legend>

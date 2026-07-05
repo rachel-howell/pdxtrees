@@ -11,7 +11,8 @@ import {
 import { onSession, sendMagicLink, signOut, type Session } from './auth';
 import { clearLegacyData, readLegacyData } from './legacy';
 import { exportData, importData } from './export';
-import MapView from './components/MapView';
+import MapView, { type SearchTarget } from './components/MapView';
+import SearchPanel from './components/SearchPanel';
 import TreeDetail from './components/TreeDetail';
 import TreeForm from './components/TreeForm';
 import TreeList from './components/TreeList';
@@ -34,6 +35,8 @@ export default function App() {
   const [loginState, setLoginState] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [legacyCount, setLegacyCount] = useState(0);
   const [migrating, setMigrating] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTarget, setSearchTarget] = useState<SearchTarget | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<number | undefined>(undefined);
@@ -161,6 +164,13 @@ export default function App() {
         <div className="topbar-actions">
           <button
             className="btn btn-topbar"
+            aria-label="Search places"
+            onClick={() => setSearchOpen(!searchOpen)}
+          >
+            🔍
+          </button>
+          <button
+            className="btn btn-topbar"
             onClick={() => setView(view === 'map' ? 'list' : 'map')}
           >
             {view === 'map' ? 'List' : 'Map'}
@@ -253,11 +263,30 @@ export default function App() {
           }}
           readOnly={!loggedIn}
           panelOpen={panel.kind === 'detail'}
+          searchTarget={searchTarget}
+          onClearSearchTarget={() => setSearchTarget(null)}
+          onNotify={showToast}
           onDismissPanel={() => setPanel({ kind: 'none' })}
           onSelect={(treeId) => setPanel({ kind: 'detail', treeId })}
           onRequestAdd={(coords) => setPanel({ kind: 'form', coords })}
         />
         {view === 'list' && <TreeList trees={trees} onPick={pickFromList} />}
+        {searchOpen && (
+          <SearchPanel
+            center={
+              mapRef.current
+                ? { lat: mapRef.current.getCenter().lat, lng: mapRef.current.getCenter().lng }
+                : { lat: 45.5152, lng: -122.6784 }
+            }
+            onPick={(r) => {
+              setSearchOpen(false);
+              setSearchTarget(r);
+              setView('map');
+              mapRef.current?.flyTo([r.lat, r.lng], 18);
+            }}
+            onClose={() => setSearchOpen(false)}
+          />
+        )}
         {selectedTree && (
           <TreeDetail
             tree={selectedTree}

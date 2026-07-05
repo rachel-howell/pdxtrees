@@ -66,6 +66,8 @@ export default function TreeDetail({
         <span className="detail-date">Encountered {tree.dateEncountered}</span>
       </div>
 
+      {tree.locationLabel && <p className="detail-location">📍 {tree.locationLabel}</p>}
+
       <p className="detail-coords">
         {tree.lat.toFixed(5)}, {tree.lng.toFixed(5)}
       </p>

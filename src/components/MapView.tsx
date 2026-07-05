@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
+import { useRef, useState } from 'react';
+import { Circle, MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
 import L, { type LatLng, type Map as LeafletMap } from 'leaflet';
 import type { Confidence, Tree } from '../db';
 
@@ -18,7 +18,7 @@ function loadView(): typeof DEFAULT_VIEW {
 
 const iconCache = new Map<string, L.DivIcon>();
 
-function pinIcon(kind: Confidence | 'draft'): L.DivIcon {
+function pinIcon(kind: Confidence | 'draft' | 'search' | 'self'): L.DivIcon {
   let icon = iconCache.get(kind);
   if (!icon) {
     icon = L.divIcon({
@@ -48,6 +48,12 @@ function MapEvents({ onTap }: { onTap: (latlng: LatLng) => void }) {
   return null;
 }
 
+export interface SearchTarget {
+  lat: number;
+  lng: number;
+  label: string;
+}
+
 interface Props {
   trees: Tree[];
   setMapRef: (map: LeafletMap | null) => void;
@@ -55,6 +61,9 @@ interface Props {
   readOnly: boolean;
   /** When a panel is open, a map tap dismisses it instead of dropping a draft pin. */
   panelOpen: boolean;
+  searchTarget: SearchTarget | null;
+  onClearSearchTarget: () => void;
+  onNotify: (message: string) => void;
   onDismissPanel: () => void;
   onSelect: (id: string) => void;
   onRequestAdd: (coords: { lat: number; lng: number }) => void;
@@ -65,12 +74,18 @@ export default function MapView({
   setMapRef,
   readOnly,
   panelOpen,
+  searchTarget,
+  onClearSearchTarget,
+  onNotify,
   onDismissPanel,
   onSelect,
   onRequestAdd,
 }: Props) {
   const [initialView] = useState(loadView);
   const [draft, setDraft] = useState<{ lat: number; lng: number } | null>(null);
+  const [self, setSelf] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const mapInstance = useRef<LeafletMap | null>(null);
 
   function handleTap(latlng: LatLng) {
     if (panelOpen) {
@@ -81,10 +96,45 @@ export default function MapView({
     }
   }
 
+  function locateMe() {
+    if (!navigator.geolocation) {
+      onNotify('Location is not available in this browser.');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        const loc = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+        };
+        setSelf(loc);
+        mapInstance.current?.flyTo(
+          [loc.lat, loc.lng],
+          Math.max(mapInstance.current.getZoom(), 17),
+        );
+      },
+      (err) => {
+        setLocating(false);
+        onNotify(
+          err.code === err.PERMISSION_DENIED
+            ? 'Location permission denied — allow it in your browser settings.'
+            : 'Could not get your location.',
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+    );
+  }
+
   return (
     <div className="map-wrap">
       <MapContainer
-        ref={setMapRef}
+        ref={(m) => {
+          mapInstance.current = m;
+          setMapRef(m);
+        }}
         center={[initialView.lat, initialView.lng]}
         zoom={initialView.zoom}
         maxZoom={21}
@@ -115,7 +165,37 @@ export default function MapView({
           />
         ))}
         {draft && <Marker position={[draft.lat, draft.lng]} icon={pinIcon('draft')} />}
+        {searchTarget && (
+          <Marker position={[searchTarget.lat, searchTarget.lng]} icon={pinIcon('search')} />
+        )}
+        {self && (
+          <>
+            <Circle
+              center={[self.lat, self.lng]}
+              radius={self.accuracy}
+              pathOptions={{ color: '#3b82f6', weight: 1, fillOpacity: 0.12 }}
+            />
+            <Marker position={[self.lat, self.lng]} icon={pinIcon('self')} />
+          </>
+        )}
       </MapContainer>
+      <button
+        className="locate-btn"
+        aria-label="Show my location"
+        title="Show my location"
+        onClick={locateMe}
+        disabled={locating}
+      >
+        {locating ? '…' : '◎'}
+      </button>
+      {searchTarget && !draft && (
+        <div className="draft-bar">
+          <span className="draft-coords">{searchTarget.label}</span>
+          <button className="btn" onClick={onClearSearchTarget}>
+            ✕
+          </button>
+        </div>
+      )}
       {draft && (
         <div className="draft-bar">
           <span className="draft-coords">

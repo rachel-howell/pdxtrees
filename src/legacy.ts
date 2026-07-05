@@ -6,8 +6,9 @@ import type { Photo, Tree } from './db';
  * migrated to Supabase, then deleted.
  */
 
-interface LegacyTree extends Omit<Tree, 'isPublic'> {
+interface LegacyTree extends Omit<Tree, 'isPublic' | 'locationLabel'> {
   isPublic?: boolean;
+  locationLabel?: string;
 }
 
 function openLegacy(): Dexie {
@@ -24,7 +25,12 @@ export async function readLegacyData(): Promise<{ trees: Tree[]; photos: Photo[]
     if (trees.length === 0) return null;
     const photos = (await db.table('photos').toArray()) as Photo[];
     return {
-      trees: trees.map((t) => ({ ...t, isPublic: false, nickname: t.nickname ?? '' })),
+      trees: trees.map((t) => ({
+        ...t,
+        isPublic: false,
+        nickname: t.nickname ?? '',
+        locationLabel: t.locationLabel ?? '',
+      })),
       photos,
     };
   } finally {
