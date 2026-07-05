@@ -45,6 +45,9 @@ export default function App() {
   const mapRef = useRef<LeafletMap | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<number | undefined>(undefined);
+  // Captured at first render, before the hash-sync effect can clear the URL;
+  // kept while unresolved so logging in after a failed scan retries it.
+  const pendingDeepLink = useRef<string | null>(treeIdFromHash(window.location.hash));
 
   const loggedIn = !!session;
 
@@ -74,19 +77,23 @@ export default function App() {
   useEffect(() => {
     if (session === undefined) return; // wait until we know who's asking
     async function resolveHash() {
-      const id = treeIdFromHash(window.location.hash);
+      const id = treeIdFromHash(window.location.hash) ?? pendingDeepLink.current;
       if (!id) return;
+      pendingDeepLink.current = id;
       const tree = await getTree(id).catch(() => null);
       if (tree) {
+        pendingDeepLink.current = null;
         setTrees((prev) => (prev.some((t) => t.id === tree.id) ? prev : [...prev, tree]));
         setView('map');
         setPanel({ kind: 'detail', treeId: tree.id });
         mapRef.current?.flyTo([tree.lat, tree.lng], Math.max(mapRef.current.getZoom(), 18));
       } else {
         showToast('Tree not found — it may be private. Log in and try again.');
-        if (!session) {
+        if (session) {
+          pendingDeepLink.current = null; // definitive: logged in and still hidden/missing
+        } else {
           setLoginState('idle');
-          setLoginOpen(true);
+          setLoginOpen(true); // keep the pending id so login retries the scan
         }
       }
     }
@@ -102,7 +109,7 @@ export default function App() {
     const hashId = treeIdFromHash(window.location.hash);
     if (openId && openId !== hashId) {
       history.replaceState(null, '', `#/tree/${openId}`);
-    } else if (!openId && hashId) {
+    } else if (!openId && hashId && !pendingDeepLink.current) {
       history.replaceState(null, '', window.location.pathname + window.location.search);
     }
   }, [panel]);
