@@ -43,6 +43,7 @@ Personal tree atlas: the owner catalogs the trees visible from their window. Liv
 
 ## Working conventions
 
+- **Never use the owner's real data as example strings** — no real tree names, nicknames, coordinates, or location labels in code comments, UI placeholders, commit messages, or docs. This repo and the deployed JS bundle are public; a "realistic example" copied from the database is a location disclosure. Invent generic examples.
 - **Verify like it's production, because it is** — the owner's real data lives in the prod DB. Create clearly-labeled test records, exercise the real UI via the Chrome extension, then delete them and confirm zero orphans (DB rows AND storage objects). After any schema/RLS change, verify the anon lockout from outside with curl.
 - Browser automation can't drive native file dialogs — inject a `File` via `DataTransfer` on the input and dispatch a `change` event. Never use `window.confirm` in app code (blocks the extension; the app uses inline two-step confirms). `jsqr` is a devDependency for decoding generated QR codes in-page (importable in dev via `/pdxtrees/@fs/...`).
 - Typecheck (`npx tsc --noEmit`) + build before committing; commit messages explain the why; pushing `main` deploys. Confirm the deploy concluded `success` and spot-check the live site (anon sees nothing private).
