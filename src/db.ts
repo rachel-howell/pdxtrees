@@ -3,6 +3,9 @@ import { currentUserId } from './auth';
 
 export type Confidence = 'high' | 'medium' | 'low';
 
+/** Lifecycle: seen from the window → ID guessed → visited and confirmed. Drives pin color. */
+export type TreeStatus = 'spotted' | 'guessed' | 'confirmed';
+
 export interface Tree {
   id: string;
   lat: number;
@@ -14,6 +17,7 @@ export interface Tree {
   dateEncountered: string; // ISO date (yyyy-mm-dd)
   notes: string;
   confidence: Confidence;
+  status: TreeStatus;
   /** Human-readable spot, e.g. "SW Park Ave & SW Salmon St". Auto-filled, user-editable. */
   locationLabel: string;
   /** Per-tree opt-in; only effective when the account privacy switch is off. */
@@ -39,6 +43,7 @@ interface TreeRow {
   date_encountered: string;
   notes: string;
   confidence: Confidence;
+  status: TreeStatus;
   location_label: string;
   lat: number;
   lng: number;
@@ -64,6 +69,7 @@ function fromRow(r: TreeRow): Tree {
     dateEncountered: r.date_encountered,
     notes: r.notes,
     confidence: r.confidence,
+    status: r.status,
     locationLabel: r.location_label,
     isPublic: r.is_public,
     createdAt: r.created_at,
@@ -81,9 +87,15 @@ function toRow(data: Partial<Omit<Tree, 'id' | 'createdAt' | 'updatedAt'>>): Rec
   if (data.dateEncountered !== undefined) row.date_encountered = data.dateEncountered;
   if (data.notes !== undefined) row.notes = data.notes;
   if (data.confidence !== undefined) row.confidence = data.confidence;
+  if (data.status !== undefined) row.status = data.status;
   if (data.locationLabel !== undefined) row.location_label = data.locationLabel;
   if (data.isPublic !== undefined) row.is_public = data.isPublic;
   return row;
+}
+
+/** Title shown everywhere a tree is named; spotted trees may have no name yet. */
+export function displayName(tree: Pick<Tree, 'nickname' | 'commonName'>): string {
+  return tree.nickname || tree.commonName || 'Unidentified tree';
 }
 
 async function requireUid(): Promise<string> {
@@ -199,6 +211,99 @@ export async function deletePhoto(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+// --- Window views: photos of the view with markers linking to trees.
+// --- Always owner-private; there is no public access path by design.
+
+export interface WindowView {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface ViewMarker {
+  id: string;
+  viewId: string;
+  treeId: string;
+  /** Fractions (0–1) of the image's width/height. */
+  x: number;
+  y: number;
+}
+
+function viewImagePath(userId: string, viewId: string): string {
+  return `${userId}/views/${viewId}.jpg`;
+}
+
+export async function listViews(): Promise<WindowView[]> {
+  const { data, error } = await supabase
+    .from('views')
+    .select('id, name, created_at')
+    .order('created_at');
+  if (error) throw new Error(error.message);
+  return data.map((r) => ({ id: r.id, name: r.name, createdAt: r.created_at }));
+}
+
+export async function createView(name: string, blob: Blob): Promise<WindowView> {
+  const uid = await requireUid();
+  const id = crypto.randomUUID();
+  const { error: upErr } = await supabase.storage
+    .from(BUCKET)
+    .upload(viewImagePath(uid, id), blob, { contentType: 'image/jpeg' });
+  if (upErr) throw new Error(upErr.message);
+  const { data, error } = await supabase
+    .from('views')
+    .insert({ id, name })
+    .select('id, name, created_at')
+    .single();
+  if (error) {
+    await supabase.storage.from(BUCKET).remove([viewImagePath(uid, id)]);
+    throw new Error(error.message);
+  }
+  return { id: data.id, name: data.name, createdAt: data.created_at };
+}
+
+export async function deleteView(id: string): Promise<void> {
+  const uid = await requireUid();
+  await supabase.storage.from(BUCKET).remove([viewImagePath(uid, id)]);
+  const { error } = await supabase.from('views').delete().eq('id', id); // markers cascade
+  if (error) throw new Error(error.message);
+}
+
+export async function getViewImage(id: string): Promise<Blob> {
+  const uid = await requireUid();
+  const { data, error } = await supabase.storage.from(BUCKET).download(viewImagePath(uid, id));
+  if (error) throw new Error(error.message);
+  return data as Blob;
+}
+
+export async function listMarkers(viewId: string): Promise<ViewMarker[]> {
+  const { data, error } = await supabase
+    .from('view_markers')
+    .select('id, view_id, tree_id, x, y')
+    .eq('view_id', viewId);
+  if (error) throw new Error(error.message);
+  return data.map((r) => ({ id: r.id, viewId: r.view_id, treeId: r.tree_id, x: r.x, y: r.y }));
+}
+
+export async function addMarker(
+  viewId: string,
+  treeId: string,
+  x: number,
+  y: number,
+): Promise<ViewMarker> {
+  await requireUid();
+  const id = crypto.randomUUID();
+  const { error } = await supabase
+    .from('view_markers')
+    .insert({ id, view_id: viewId, tree_id: treeId, x, y });
+  if (error) throw new Error(error.message);
+  return { id, viewId, treeId, x, y };
+}
+
+export async function deleteMarker(id: string): Promise<void> {
+  const { error } = await supabase.from('view_markers').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 // --- Account privacy (profiles.account_private master switch)
 
 export async function getAccountPrivate(): Promise<boolean> {
@@ -264,6 +369,7 @@ export async function importRecords(
           isPublic: t.isPublic ?? false,
           nickname: t.nickname ?? '',
           locationLabel: t.locationLabel ?? '',
+          status: t.status ?? 'guessed',
         }),
         created_at: t.createdAt,
         updated_at: t.updatedAt,

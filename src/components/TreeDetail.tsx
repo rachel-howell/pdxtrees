@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { getPhotos, type Photo, type Tree } from '../db';
+import { displayName, getPhotos, type Photo, type Tree } from '../db';
 
 const CONFIDENCE_LABEL = { high: 'High', medium: 'Medium', low: 'Low' } as const;
+const STATUS_LABEL = { spotted: 'Spotted', guessed: 'Guessed', confirmed: 'Confirmed' } as const;
 
 function PhotoView({ photo }: { photo: Photo }) {
   const [url, setUrl] = useState<string>();
@@ -51,8 +52,8 @@ export default function TreeDetail({
     <aside className="detail-panel">
       <div className="detail-header">
         <div>
-          <h2>{tree.nickname || tree.commonName}</h2>
-          {tree.nickname && <p className="detail-common">{tree.commonName}</p>}
+          <h2>{displayName(tree)}</h2>
+          {tree.nickname && tree.commonName && <p className="detail-common">{tree.commonName}</p>}
           {tree.species && <p className="detail-species">{tree.species}</p>}
         </div>
         <button className="icon-btn" aria-label="Close" onClick={onClose}>
@@ -61,9 +62,12 @@ export default function TreeDetail({
       </div>
 
       <div className="detail-meta">
-        <span className={`badge badge-${tree.confidence}`}>
-          {CONFIDENCE_LABEL[tree.confidence]} confidence
-        </span>
+        <span className={`badge badge-${tree.status}`}>{STATUS_LABEL[tree.status]}</span>
+        {tree.status !== 'spotted' && (
+          <span className={`badge badge-${tree.confidence}`}>
+            {CONFIDENCE_LABEL[tree.confidence]} confidence
+          </span>
+        )}
         {!readOnly && <span className={`badge ${visibility.cls}`}>{visibility.label}</span>}
         <span className="detail-date">Encountered {tree.dateEncountered}</span>
       </div>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import type { Confidence, Tree } from '../db';
+import { displayName, type Confidence, type Tree, type TreeStatus } from '../db';
 
-const CONFIDENCE_LABEL = { high: 'High', medium: 'Medium', low: 'Low' } as const;
+const STATUS_LABEL = { spotted: 'Spotted', guessed: 'Guessed', confirmed: 'Confirmed' } as const;
 
 interface Props {
   trees: Tree[];
@@ -11,6 +11,7 @@ interface Props {
 export default function TreeList({ trees, onPick }: Props) {
   const [query, setQuery] = useState('');
   const [confidence, setConfidence] = useState<Confidence | 'all'>('all');
+  const [status, setStatus] = useState<TreeStatus | 'all'>('all');
   const [species, setSpecies] = useState('all');
 
   const speciesOptions = useMemo(
@@ -23,6 +24,7 @@ export default function TreeList({ trees, onPick }: Props) {
     return trees
       .filter((t) => {
         if (confidence !== 'all' && t.confidence !== confidence) return false;
+        if (status !== 'all' && t.status !== status) return false;
         if (species !== 'all' && t.species !== species) return false;
         if (!q) return true;
         return [t.commonName, t.nickname ?? '', t.species, t.notes].some((s) =>
@@ -46,6 +48,16 @@ export default function TreeList({ trees, onPick }: Props) {
           onChange={(e) => setQuery(e.target.value)}
         />
         <div className="list-filters">
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as TreeStatus | 'all')}
+            aria-label="Filter by status"
+          >
+            <option value="all">Any status</option>
+            <option value="spotted">Spotted</option>
+            <option value="guessed">Guessed</option>
+            <option value="confirmed">Confirmed</option>
+          </select>
           <select
             value={confidence}
             onChange={(e) => setConfidence(e.target.value as Confidence | 'all')}
@@ -84,9 +96,9 @@ export default function TreeList({ trees, onPick }: Props) {
           {filtered.map((t) => (
             <li key={t.id}>
               <button className="tree-row" onClick={() => onPick(t.id)}>
-                <span className={`dot dot-${t.confidence}`} title={CONFIDENCE_LABEL[t.confidence]} />
+                <span className={`dot dot-${t.status}`} title={STATUS_LABEL[t.status]} />
                 <span className="tree-row-main">
-                  <span className="tree-row-name">{t.nickname || t.commonName}</span>
+                  <span className="tree-row-name">{displayName(t)}</span>
                   {(t.nickname || t.species || t.locationLabel) && (
                     <span className="tree-row-species">
                       {[t.locationLabel, t.nickname ? t.commonName : '', t.species]

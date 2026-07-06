@@ -4,6 +4,9 @@
   --high: #22c55e;
   --medium: #f59e0b;
   --low: #ef4444;
+  --spotted: #9ca3af;
+  --guessed: #eab308;
+  --confirmed: #22c55e;
   --draft: #3b82f6;
   --bg: #ffffff;
   --text: #1a2420;
@@ -223,28 +226,27 @@ textarea,
   background: #14201a;
 }
 
-/* White-filled ring pins: readable against green canopy and pale rooftops alike */
+/* Solid status-colored pins with a white ring + dark outline for canopy contrast */
 .pin {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: #fff;
-  border: 6px solid;
+  border: 3px solid #fff;
   box-shadow:
     0 0 0 1.5px rgba(0, 0, 0, 0.55),
     0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
-.pin-high {
-  border-color: var(--high);
+.pin-spotted {
+  background: var(--spotted);
 }
 
-.pin-medium {
-  border-color: var(--medium);
+.pin-guessed {
+  background: var(--guessed);
 }
 
-.pin-low {
-  border-color: var(--low);
+.pin-confirmed {
+  background: var(--confirmed);
 }
 
 .pin-draft {
@@ -403,6 +405,18 @@ textarea,
   background: var(--low);
 }
 
+.badge-spotted {
+  background: var(--spotted);
+}
+
+.badge-guessed {
+  background: var(--guessed);
+}
+
+.badge-confirmed {
+  background: var(--confirmed);
+}
+
 .badge-private {
   background: #64748b;
 }
@@ -511,8 +525,8 @@ textarea,
   resize: vertical;
 }
 
-.tree-form input[hidden] {
-  display: none;
+input[hidden] {
+  display: none !important; /* our inputs set display:block, which beats the UA [hidden] rule */
 }
 
 /* iOS/Safari give date inputs a rigid intrinsic width; strip the native
@@ -593,6 +607,24 @@ textarea,
 
 .seg-low.active {
   background: var(--low);
+  color: #fff;
+  font-weight: 600;
+}
+
+.seg-spotted.active {
+  background: var(--spotted);
+  color: #fff;
+  font-weight: 600;
+}
+
+.seg-guessed.active {
+  background: var(--guessed);
+  color: #fff;
+  font-weight: 600;
+}
+
+.seg-confirmed.active {
+  background: var(--confirmed);
   color: #fff;
   font-weight: 600;
 }
@@ -779,16 +811,16 @@ textarea,
   border-radius: 50%;
 }
 
-.dot-high {
-  background: var(--high);
+.dot-spotted {
+  background: var(--spotted);
 }
 
-.dot-medium {
-  background: var(--medium);
+.dot-guessed {
+  background: var(--guessed);
 }
 
-.dot-low {
-  background: var(--low);
+.dot-confirmed {
+  background: var(--confirmed);
 }
 
 .tree-row-main {
@@ -812,6 +844,93 @@ textarea,
   font-size: 13px;
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Window views ---------- */
+
+.views-title {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+  align-self: center;
+}
+
+.view-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-row .tree-row {
+  flex: 1;
+  border-bottom: 0;
+}
+
+.view-row {
+  border-bottom: 1px solid var(--border);
+  padding-right: 4px;
+}
+
+.view-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: #101613;
+  display: flex;
+  flex-direction: column;
+}
+
+.viewer-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+  background: var(--green-dark);
+  color: #fff;
+}
+
+.viewer-topbar h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.viewer-hint {
+  flex: 1;
+  font-size: 12.5px;
+  opacity: 0.75;
+}
+
+.viewer-map {
+  flex: 1;
+  background: #101613;
+}
+
+.viewer-loading {
+  color: #fff;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.chip-badge {
+  margin-left: 8px;
+}
+
+.picker-modal input {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 16px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  margin-bottom: 8px;
+}
+
+.picker-list {
+  max-height: 50vh;
+  overflow-y: auto;
+  margin-bottom: 10px;
 }
 
 /* ---------- QR label sheet ---------- */

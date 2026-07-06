@@ -8,6 +8,7 @@ import {
   listTrees,
   setAccountPrivate,
   type Tree,
+  type WindowView,
 } from './db';
 import { treeIdFromHash } from './config';
 import { onSession, sendMagicLink, signOut, type Session } from './auth';
@@ -19,6 +20,8 @@ import SearchPanel from './components/SearchPanel';
 import TreeDetail from './components/TreeDetail';
 import TreeForm from './components/TreeForm';
 import TreeList from './components/TreeList';
+import ViewsPanel from './components/ViewsPanel';
+import ViewViewer from './components/ViewViewer';
 
 type Panel =
   | { kind: 'none' }
@@ -42,6 +45,8 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTarget, setSearchTarget] = useState<SearchTarget | null>(null);
   const [labelTrees, setLabelTrees] = useState<Tree[] | null>(null);
+  const [viewsOpen, setViewsOpen] = useState(false);
+  const [activeView, setActiveView] = useState<WindowView | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<number | undefined>(undefined);
@@ -253,6 +258,14 @@ export default function App() {
                     <button
                       onClick={() => {
                         setMenuOpen(false);
+                        setViewsOpen(true);
+                      }}
+                    >
+                      Window views
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
                         setLabelTrees(trees);
                       }}
                     >
@@ -376,6 +389,28 @@ export default function App() {
           />
         )}
         {labelTrees && <LabelSheet trees={labelTrees} onClose={() => setLabelTrees(null)} />}
+        {viewsOpen && (
+          <ViewsPanel
+            onOpen={(v) => {
+              setViewsOpen(false);
+              setActiveView(v);
+            }}
+            onClose={() => setViewsOpen(false)}
+            onNotify={showToast}
+          />
+        )}
+        {activeView && (
+          <ViewViewer
+            view={activeView}
+            trees={trees}
+            onShowTreeOnMap={(treeId) => {
+              setActiveView(null);
+              pickFromList(treeId);
+            }}
+            onNotify={showToast}
+            onClose={() => setActiveView(null)}
+          />
+        )}
         {loginOpen && (
           <div className="modal-backdrop">
             <form className="modal login-modal" onSubmit={handleLogin}>

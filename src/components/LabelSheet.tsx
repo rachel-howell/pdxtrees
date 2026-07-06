@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import type { Tree } from '../db';
+import { displayName, type Tree } from '../db';
 import { treeUrl } from '../config';
 
 interface Props {
@@ -35,8 +35,8 @@ export default function LabelSheet({ trees, onClose }: Props) {
         {trees.map((t) => (
           <div className="label-card" key={t.id}>
             <QRCodeSVG value={treeUrl(t.id)} level="M" marginSize={2} className="label-qr" />
-            <span className="label-name">{t.nickname || t.commonName}</span>
-            {t.nickname && <span className="label-sub">{t.commonName}</span>}
+            <span className="label-name">{displayName(t)}</span>
+            {t.nickname && t.commonName && <span className="label-sub">{t.commonName}</span>}
             {t.species && <span className="label-species">{t.species}</span>}
             {t.locationLabel && <span className="label-sub">{t.locationLabel}</span>}
           </div>

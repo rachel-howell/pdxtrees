@@ -8,6 +8,7 @@ import {
   type Confidence,
   type Photo,
   type Tree,
+  type TreeStatus,
 } from '../db';
 import { compressImage } from '../image';
 import { locationLabel } from '../geo';
@@ -16,6 +17,12 @@ const CONFIDENCES: { value: Confidence; label: string }[] = [
   { value: 'high', label: 'High' },
   { value: 'medium', label: 'Medium' },
   { value: 'low', label: 'Low' },
+];
+
+const STATUSES: { value: TreeStatus; label: string }[] = [
+  { value: 'spotted', label: 'Spotted' },
+  { value: 'guessed', label: 'Guessed' },
+  { value: 'confirmed', label: 'Confirmed' },
 ];
 
 /** Thumbnail that owns (and revokes) its object URL. */
@@ -53,6 +60,7 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
     tree?.dateEncountered ?? new Date().toLocaleDateString('en-CA'),
   );
   const [confidence, setConfidence] = useState<Confidence>(tree?.confidence ?? 'medium');
+  const [status, setStatus] = useState<TreeStatus>(tree?.status ?? 'spotted');
   const [isPublic, setIsPublic] = useState(tree?.isPublic ?? false);
   const [locLabel, setLocLabel] = useState(tree?.locationLabel ?? '');
   const [labelLoading, setLabelLoading] = useState(false);
@@ -90,8 +98,8 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
     e.preventDefault();
     const latNum = Number(lat);
     const lngNum = Number(lng);
-    if (!commonName.trim()) {
-      setError('Name is required.');
+    if (!commonName.trim() && status !== 'spotted') {
+      setError('Name is required once you have an identification.');
       return;
     }
     if (!Number.isFinite(latNum) || latNum < -90 || latNum > 90) {
@@ -112,6 +120,7 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
         dateEncountered,
         notes: notes.trim(),
         confidence,
+        status,
         isPublic,
         locationLabel: locLabel.trim(),
         lat: latNum,
@@ -140,12 +149,28 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
       <form className="modal tree-form" onSubmit={handleSubmit}>
         <h2>{tree ? 'Edit tree' : 'New tree'}</h2>
 
+        <fieldset className="confidence-picker">
+          <legend>Status</legend>
+          <div className="segmented">
+            {STATUSES.map((s) => (
+              <button
+                key={s.value}
+                type="button"
+                className={`seg seg-${s.value} ${status === s.value ? 'active' : ''}`}
+                onClick={() => setStatus(s.value)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
         <label>
-          Name<span className="req">*</span>
+          Name{status !== 'spotted' && <span className="req">*</span>}
           <input
             value={commonName}
             onChange={(e) => setCommonName(e.target.value)}
-            placeholder="e.g. Douglas fir"
+            placeholder={status === 'spotted' ? 'Unknown for now' : 'e.g. Douglas fir'}
             autoFocus
           />
         </label>
@@ -177,21 +202,23 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
               onChange={(e) => setDateEncountered(e.target.value)}
             />
           </label>
-          <fieldset className="confidence-picker">
-            <legend>Confidence</legend>
-            <div className="segmented">
-              {CONFIDENCES.map((c) => (
-                <button
-                  key={c.value}
-                  type="button"
-                  className={`seg seg-${c.value} ${confidence === c.value ? 'active' : ''}`}
-                  onClick={() => setConfidence(c.value)}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          {status !== 'spotted' && (
+            <fieldset className="confidence-picker">
+              <legend>Confidence</legend>
+              <div className="segmented">
+                {CONFIDENCES.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    className={`seg seg-${c.value} ${confidence === c.value ? 'active' : ''}`}
+                    onClick={() => setConfidence(c.value)}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )}
         </div>
 
         <div className="form-row">

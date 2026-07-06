@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Circle, MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
 import L, { type LatLng, type Map as LeafletMap } from 'leaflet';
-import type { Confidence, Tree } from '../db';
+import type { Tree, TreeStatus } from '../db';
 
 const VIEW_KEY = 'pdxtrees:mapview';
 const DEFAULT_VIEW = { lat: 45.5152, lng: -122.6784, zoom: 16 }; // Portland
@@ -18,7 +18,7 @@ function loadView(): typeof DEFAULT_VIEW {
 
 const iconCache = new Map<string, L.DivIcon>();
 
-function pinIcon(kind: Confidence | 'draft' | 'search' | 'self'): L.DivIcon {
+export function pinIcon(kind: TreeStatus | 'draft' | 'search' | 'self'): L.DivIcon {
   let icon = iconCache.get(kind);
   if (!icon) {
     icon = L.divIcon({
@@ -160,7 +160,7 @@ export default function MapView({
           <Marker
             key={tree.id}
             position={[tree.lat, tree.lng]}
-            icon={pinIcon(tree.confidence)}
+            icon={pinIcon(tree.status)}
             eventHandlers={{ click: () => onSelect(tree.id) }}
           />
         ))}
