@@ -62,6 +62,11 @@ interface Props {
   /** When a panel is open, a map tap dismisses it instead of dropping a draft pin. */
   panelOpen: boolean;
   searchTarget: SearchTarget | null;
+  /** Pin-relocation mode (tree form hidden meanwhile): taps/drags move this pin. */
+  relocating: { lat: number; lng: number } | null;
+  onRelocatingChange: (coords: { lat: number; lng: number }) => void;
+  onRelocateDone: () => void;
+  onRelocateCancel: () => void;
   onClearSearchTarget: () => void;
   onNotify: (message: string) => void;
   onDismissPanel: () => void;
@@ -75,6 +80,10 @@ export default function MapView({
   readOnly,
   panelOpen,
   searchTarget,
+  relocating,
+  onRelocatingChange,
+  onRelocateDone,
+  onRelocateCancel,
   onClearSearchTarget,
   onNotify,
   onDismissPanel,
@@ -88,7 +97,9 @@ export default function MapView({
   const mapInstance = useRef<LeafletMap | null>(null);
 
   function handleTap(latlng: LatLng) {
-    if (panelOpen) {
+    if (relocating) {
+      onRelocatingChange({ lat: latlng.lat, lng: latlng.lng });
+    } else if (panelOpen) {
       onDismissPanel();
       setDraft(null);
     } else if (!readOnly) {
@@ -161,10 +172,28 @@ export default function MapView({
             key={tree.id}
             position={[tree.lat, tree.lng]}
             icon={pinIcon(tree.status)}
-            eventHandlers={{ click: () => onSelect(tree.id) }}
+            eventHandlers={{
+              // while relocating, stray taps on other pins must not switch panels
+              click: () => {
+                if (!relocating) onSelect(tree.id);
+              },
+            }}
           />
         ))}
-        {draft && <Marker position={[draft.lat, draft.lng]} icon={pinIcon('draft')} />}
+        {draft && !relocating && <Marker position={[draft.lat, draft.lng]} icon={pinIcon('draft')} />}
+        {relocating && (
+          <Marker
+            position={[relocating.lat, relocating.lng]}
+            icon={pinIcon('draft')}
+            draggable
+            eventHandlers={{
+              dragend: (e) => {
+                const p = (e.target as L.Marker).getLatLng();
+                onRelocatingChange({ lat: p.lat, lng: p.lng });
+              },
+            }}
+          />
+        )}
         {searchTarget && (
           <Marker position={[searchTarget.lat, searchTarget.lng]} icon={pinIcon('search')} />
         )}
@@ -188,7 +217,22 @@ export default function MapView({
       >
         {locating ? '…' : '◎'}
       </button>
-      {searchTarget && !draft && (
+      {relocating && (
+        <div className="draft-bar">
+          <span className="draft-coords">
+            <strong>Drag the pin or long-press to move it</strong>
+            <br />
+            {relocating.lat.toFixed(5)}, {relocating.lng.toFixed(5)}
+          </span>
+          <button className="btn btn-primary" onClick={onRelocateDone}>
+            Done
+          </button>
+          <button className="btn" onClick={onRelocateCancel}>
+            Cancel
+          </button>
+        </div>
+      )}
+      {searchTarget && !draft && !relocating && (
         <div className="draft-bar">
           <span className="draft-coords">{searchTarget.label}</span>
           <button className="btn" onClick={onClearSearchTarget}>
@@ -196,7 +240,7 @@ export default function MapView({
           </button>
         </div>
       )}
-      {draft && (
+      {draft && !relocating && (
         <div className="draft-bar">
           <span className="draft-coords">
             {draft.lat.toFixed(5)}, {draft.lng.toFixed(5)}

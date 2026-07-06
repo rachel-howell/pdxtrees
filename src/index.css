@@ -429,6 +429,65 @@ textarea,
   background: #a16207;
 }
 
+/* Badges double as quick-change menu triggers on the detail panel */
+button.badge-btn {
+  border: 0;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pill-menu {
+  margin: 8px 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pill-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  font: inherit;
+  font-size: 14.5px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.pill-option:hover {
+  background: #f0f5f2;
+}
+
+.pill-option:disabled {
+  opacity: 0.6;
+}
+
+.pill-option-edit {
+  font-weight: 600;
+  color: var(--green);
+}
+
+.radio {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+}
+
+.radio-on {
+  border-color: var(--green);
+  background: radial-gradient(circle, var(--green) 45%, transparent 50%);
+}
+
 .detail-location {
   margin: 8px 0 0;
   font-size: 14.5px;
@@ -737,6 +796,48 @@ input[hidden] {
   color: var(--low);
   font-size: 14px;
   margin: 0 0 10px;
+}
+
+/* Sticky Cancel / title / Save bar at the top of the tree form */
+.form-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -18px -18px 14px;
+  padding: 12px 14px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  border-radius: 14px 14px 0 0;
+}
+
+.form-header h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+  text-align: center;
+}
+
+/* Read-only coordinates + Move pin (coordinates are only changed on the map) */
+.coords-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.coords-value {
+  font-size: 14px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Keeps the tree form mounted (field state intact) while the pin moves on the map */
+.modal-backdrop.hidden-modal {
+  display: none;
 }
 
 .form-actions {

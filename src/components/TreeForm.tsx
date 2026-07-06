@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   addPhoto,
   createTree,
@@ -46,12 +46,26 @@ function PhotoThumb({ blob, onRemove }: { blob: Blob; onRemove: () => void }) {
 interface Props {
   tree?: Tree; // edit mode when set
   coords: { lat: number; lng: number };
+  /** Preselect a status (e.g. quick-change from the detail pills on a nameless tree). */
+  initialStatus?: TreeStatus;
   accountPrivate: boolean;
+  /** Kept mounted but invisible while the pin is being moved on the map. */
+  hidden: boolean;
+  onRelocate: (coords: { lat: number; lng: number }) => void;
   onSaved: (treeId: string) => void;
   onCancel: () => void;
 }
 
-export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCancel }: Props) {
+export default function TreeForm({
+  tree,
+  coords,
+  initialStatus,
+  accountPrivate,
+  hidden,
+  onRelocate,
+  onSaved,
+  onCancel,
+}: Props) {
   const [commonName, setCommonName] = useState(tree?.commonName ?? '');
   const [nickname, setNickname] = useState(tree?.nickname ?? '');
   const [species, setSpecies] = useState(tree?.species ?? '');
@@ -60,7 +74,7 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
     tree?.dateEncountered ?? new Date().toLocaleDateString('en-CA'),
   );
   const [confidence, setConfidence] = useState<Confidence>(tree?.confidence ?? 'medium');
-  const [status, setStatus] = useState<TreeStatus>(tree?.status ?? 'spotted');
+  const [status, setStatus] = useState<TreeStatus>(initialStatus ?? tree?.status ?? 'spotted');
   const [isPublic, setIsPublic] = useState(tree?.isPublic ?? false);
   const [locLabel, setLocLabel] = useState(tree?.locationLabel ?? '');
   const [labelLoading, setLabelLoading] = useState(false);
@@ -93,6 +107,20 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
     if (!tree) refreshLabel(coords.lat, coords.lng, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A new coords object arrives when the pin was moved on the map: adopt it
+  // and refresh the (now stale) location label. Skip the mount-time value.
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    setLat(String(coords.lat));
+    setLng(String(coords.lng));
+    refreshLabel(coords.lat, coords.lng);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coords]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -145,9 +173,19 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
   }
 
   return (
-    <div className="modal-backdrop">
+    <div className={`modal-backdrop${hidden ? ' hidden-modal' : ''}`}>
       <form className="modal tree-form" onSubmit={handleSubmit}>
-        <h2>{tree ? 'Edit tree' : 'New tree'}</h2>
+        <div className="form-header">
+          <button type="button" className="btn" onClick={onCancel} disabled={saving}>
+            Cancel
+          </button>
+          <h2>{tree ? 'Edit tree' : 'New tree'}</h2>
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+
+        {error && <p className="form-error">{error}</p>}
 
         <fieldset className="confidence-picker">
           <legend>Status</legend>
@@ -221,15 +259,17 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
           )}
         </div>
 
-        <div className="form-row">
-          <label>
-            Latitude
-            <input inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} />
-          </label>
-          <label>
-            Longitude
-            <input inputMode="decimal" value={lng} onChange={(e) => setLng(e.target.value)} />
-          </label>
+        <div className="coords-row">
+          <span className="coords-value">
+            📍 {Number(lat).toFixed(5)}, {Number(lng).toFixed(5)}
+          </span>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => onRelocate({ lat: Number(lat), lng: Number(lng) })}
+          >
+            Move pin
+          </button>
         </div>
 
         <label>
@@ -328,16 +368,6 @@ export default function TreeForm({ tree, coords, accountPrivate, onSaved, onCanc
           </div>
         </div>
 
-        {error && <p className="form-error">{error}</p>}
-
-        <div className="form-actions">
-          <button type="button" className="btn" onClick={onCancel} disabled={saving}>
-            Cancel
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Save tree'}
-          </button>
-        </div>
       </form>
     </div>
   );

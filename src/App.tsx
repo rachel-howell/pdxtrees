@@ -8,6 +8,7 @@ import {
   listTrees,
   setAccountPrivate,
   type Tree,
+  type TreeStatus,
   type WindowView,
 } from './db';
 import { treeIdFromHash } from './config';
@@ -26,7 +27,12 @@ import ViewViewer from './components/ViewViewer';
 type Panel =
   | { kind: 'none' }
   | { kind: 'detail'; treeId: string }
-  | { kind: 'form'; tree?: Tree; coords: { lat: number; lng: number } };
+  | {
+      kind: 'form';
+      tree?: Tree;
+      coords: { lat: number; lng: number };
+      initialStatus?: TreeStatus;
+    };
 
 export default function App() {
   // undefined = session not yet known; null = definitely logged out
@@ -47,6 +53,8 @@ export default function App() {
   const [labelTrees, setLabelTrees] = useState<Tree[] | null>(null);
   const [viewsOpen, setViewsOpen] = useState(false);
   const [activeView, setActiveView] = useState<WindowView | null>(null);
+  // Pin-relocation mode: the open tree form hides while the pin moves on the map
+  const [relocating, setRelocating] = useState<{ lat: number; lng: number } | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<number | undefined>(undefined);
@@ -157,8 +165,22 @@ export default function App() {
   }
 
   async function handleSaved(treeId: string) {
+    setRelocating(null);
     await refresh();
     setPanel({ kind: 'detail', treeId });
+  }
+
+  function startRelocate(coords: { lat: number; lng: number }) {
+    setRelocating(coords);
+    setView('map');
+    mapRef.current?.flyTo([coords.lat, coords.lng], Math.max(mapRef.current.getZoom(), 18));
+  }
+
+  function finishRelocate() {
+    if (relocating && panel.kind === 'form') {
+      setPanel({ ...panel, coords: relocating }); // new object → form adopts the coords
+    }
+    setRelocating(null);
   }
 
   async function handleImport(file: File) {
@@ -337,6 +359,10 @@ export default function App() {
           readOnly={!loggedIn}
           panelOpen={panel.kind === 'detail'}
           searchTarget={searchTarget}
+          relocating={relocating}
+          onRelocatingChange={setRelocating}
+          onRelocateDone={finishRelocate}
+          onRelocateCancel={() => setRelocating(null)}
           onClearSearchTarget={() => setSearchTarget(null)}
           onNotify={showToast}
           onDismissPanel={() => setPanel({ kind: 'none' })}
@@ -374,6 +400,16 @@ export default function App() {
                 coords: { lat: selectedTree.lat, lng: selectedTree.lng },
               })
             }
+            onEditWithStatus={(status) =>
+              setPanel({
+                kind: 'form',
+                tree: selectedTree,
+                coords: { lat: selectedTree.lat, lng: selectedTree.lng },
+                initialStatus: status,
+              })
+            }
+            onUpdated={refresh}
+            onNotify={showToast}
             onDelete={() => handleDelete(selectedTree.id)}
           />
         )}
@@ -381,11 +417,15 @@ export default function App() {
           <TreeForm
             tree={panel.tree}
             coords={panel.coords}
+            initialStatus={panel.initialStatus}
             accountPrivate={accountPrivate}
+            hidden={relocating !== null}
+            onRelocate={startRelocate}
             onSaved={handleSaved}
-            onCancel={() =>
-              setPanel(panel.tree ? { kind: 'detail', treeId: panel.tree.id } : { kind: 'none' })
-            }
+            onCancel={() => {
+              setRelocating(null);
+              setPanel(panel.tree ? { kind: 'detail', treeId: panel.tree.id } : { kind: 'none' });
+            }}
           />
         )}
         {labelTrees && <LabelSheet trees={labelTrees} onClose={() => setLabelTrees(null)} />}
