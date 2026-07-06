@@ -1,0 +1,10 @@
+#!/bin/sh
+# Typecheck + unit tests before every push. Bypass with: git push --no-verify
+# The RLS suite (npm run test:rls) needs network and stays manual — run it
+# after any schema/RLS change.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+echo "pre-push: typechecking…"
+npx tsc -b
+echo "pre-push: running unit tests…"
+npm test
